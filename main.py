@@ -3,13 +3,16 @@ import sys
 
 import gym
 from gym import wrappers, logger
+import gym_maze
+
+
 
 import agents
 from agents.random import RandomAgent
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=None)
-    parser.add_argument('env_id', nargs='?', default='CartPole-v0', help='Select the environment to run')
+    parser.add_argument('env_id', nargs='?', default='maze-random-10x10-plus-v0', help='Select the environment to run')
     args = parser.parse_args()
 
     # You can set the level to logger.DEBUG or logger.WARN if you
