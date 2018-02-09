@@ -9,6 +9,7 @@ import gym_snake
 
 import agents
 from agents.random import RandomAgent
+from agents.dqnagent import DQNAgent
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=None)
@@ -22,9 +23,9 @@ if __name__ == '__main__':
     env = gym.make(args.env_id)
 
     env.seed(0)
-    agent = RandomAgent(env.action_space)
+    agent = DQNAgent(env.action_space)
 
-    episode_count = 100
+    episode_count = 1000
     reward = 0
     done = False
 
@@ -37,4 +38,4 @@ if __name__ == '__main__':
 
             if done:
                 break
-            env.render()
+            # env.render()
