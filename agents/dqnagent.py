@@ -31,22 +31,23 @@ nb_hidden_layer = 2
 layer_width = 16
 memory_len = 200
 batch_size = 64
+episode_count = 1000
 
 np.random.seed(seed)
 tf.set_random_seed(seed)
 
 class DQNAgent(Agent):
-    def __init__(self, observation_space, action_space, seed=0, min_episode_before_acting=100):
+    def __init__(self, observation_space, action_space, seed=seed, min_episode_before_acting=min_episode):
         super().__init__(action_space)
 
         self._random = random.Random(seed)
         self.gamma = 0.95    # discount rate
-        self.epsilon = 1  # exploration rate
+        self.epsilon = epsilon  # exploration rate
         self.epsilon_min = 0.01
         self.epsilon_decay = 0.995
         self.learning_rate = 0.001
 
-        self._memory = deque(maxlen=200)
+        self._memory = deque(maxlen=memory_len)
 
         self._observation_space = observation_space
         self._action_space = action_space
@@ -64,9 +65,9 @@ class DQNAgent(Agent):
 
         for i in range(nb_hidden_layer):
             if i == 0:
-                model.add(Dense(layer_width, name='dense'+i, activation=activation, input_shape=input_shape))
+                model.add(Dense(layer_width, name='dense{}'.format(i), activation=activation, input_shape=input_shape))
             else:
-                model.add(Dense(16, name='dense2', activation=activation))
+                model.add(Dense(layer_width, name='dense{}'.format(i), activation=activation))
 
         if type(self._action_space) is Discrete:
             output_shape = self._action_space.n 
@@ -133,7 +134,6 @@ if __name__ == '__main__':
     env.seed(seed)
     agent = DQNAgent(env.observation_space, env.action_space, seed)
 
-    episode_count = 1000
     reward = 0
     done = False
 
@@ -163,14 +163,14 @@ if __name__ == '__main__':
                 if score >= solved_score and first_solved == None:
                     first_solved = i
 
-                if score == 250:
+                if i == 250:
                     mean_score_at_250 = np.mean(scores)
-                elif score == 500:
+                elif i == 500:
                     mean_score_at_500 = np.mean(scores)
-                if score == 750:
+                if i == 750:
                     mean_score_at_750 = np.mean(scores)
 
-                print('Episode: {}\t Epsilon: {}\t Score: {}\t Mean Score:{}\t First Soled:{}'.format(i, agent.epsilon, score, np.mean(scores), first_solved))
+                print('Episode: {}\t Epsilon: {}\t Score: {}\t Mean Score:{}\t First Solved:{}'.format(i, agent.epsilon, score, np.mean(scores), first_solved))
                 agent.train(batch_size=batch_size)
                 break
             env.render()
@@ -184,4 +184,4 @@ if __name__ == '__main__':
     print("layer_width = {}".format(layer_width))
     print("memory_len = {}".format(memory_len))
     print("batch_size = {}".format(batch_size))
-    print('Mean Score:{}\t First Solved:{}'.format(np.mean(scores), first_solved))
+    print('Mean Score:{}\tat 250:{}\tat 500:{}\tat 750:{}\tFirst Solved:{}'.format(np.mean(scores), mean_score_at_250, mean_score_at_500, mean_score_at_750, first_solved))
