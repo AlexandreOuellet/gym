@@ -170,7 +170,7 @@ if __name__ == '__main__':
                 if score == 750:
                     mean_score_at_750 = np.mean(scores)
 
-                print('Episode: {}\t Epsilon: {}\t Score: {}\t Mean Score:{}\t First Soled:{}'.format(i, agent.epsilon, score, np.mean(scores), first_200))
+                print('Episode: {}\t Epsilon: {}\t Score: {}\t Mean Score:{}\t First Soled:{}'.format(i, agent.epsilon, score, np.mean(scores), first_solved))
                 agent.train(batch_size=batch_size)
                 break
             env.render()
