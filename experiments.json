@@ -1,0 +1,31 @@
+{
+    "experiments":{
+        "env":{
+            "gym":"cartpole-v0",
+            "seed":1
+        },
+        "agent":{
+            "activation":"tanh",
+            "min_episode":0,
+            "epsilon":1,
+            "nb_hidden_layer":2,
+            "layer_width":4,
+            "memory_len":200,
+            "batch_size":32
+        },
+        "variations":[
+            {
+                "seed":1
+            },
+            {
+                "seed":2
+            },
+            {
+                "min_episode":0
+            },
+            {
+                "min_episode":100
+            }
+        ]
+    }
+}

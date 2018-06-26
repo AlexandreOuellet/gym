@@ -2,8 +2,8 @@ import argparse
 import sys
 
 import os
-os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"   # see issue #152
-os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+# os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"   # see issue #152
+# os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 from collections import deque
 import random
@@ -18,45 +18,46 @@ from keras.models import Sequential
 from keras.layers import Dense
 from keras.optimizers import Adam
 
+from gym.wrappers import Monitor
+
 import numpy as np
 
 import tensorflow as tf
 
-# Hyperparamters
-seed = 1
-activation = 'tanh'
-min_episode = 100
-epsilon = 1
-nb_hidden_layer = 2
-layer_width = 16
-memory_len = 200
-batch_size = 64
-episode_count = 1000
-
-np.random.seed(seed)
-tf.set_random_seed(seed)
-
 class DQNAgent(Agent):
-    def __init__(self, observation_space, action_space, seed=seed, min_episode_before_acting=min_episode):
+    def __init__(self, observation_space, action_space,
+        seed=0,
+        min_episode_before_acting=0,
+        activation="tanh",
+        epsilon=1,
+        layer_width=16,
+        batch_size=64,
+        nb_hidden_layer=4,
+        memory_length=200):
+
+        np.random.seed(seed)
+        tf.set_random_seed(seed)
+
         super().__init__(action_space)
 
         self._random = random.Random(seed)
+
         self.gamma = 0.95    # discount rate
         self.epsilon = epsilon  # exploration rate
         self.epsilon_min = 0.01
         self.epsilon_decay = 0.995
         self.learning_rate = 0.001
 
-        self._memory = deque(maxlen=memory_len)
+        self._memory = deque(maxlen=memory_length)
 
         self._observation_space = observation_space
         self._action_space = action_space
 
-        self._model = self._build_model()
+        self._model = self._build_model(nb_hidden_layer, activation)
 
         self._min_episode_before_acting = min_episode_before_acting
 
-    def _build_model(self):
+    def _build_model(self, nb_hidden_layer, activation):
 
         model = Sequential()
 
@@ -130,6 +131,8 @@ if __name__ == '__main__':
     logger.set_level(logger.INFO)
 
     env = gym.make(args.env_id)
+    env = Monitor(env, "./monitoring/{}/".format(experiment_id), video_callable=False, force=True, resume=False,
+                 write_upon_reset=False, uid=None, mode=None)
 
     env.seed(seed)
     agent = DQNAgent(env.observation_space, env.action_space, seed)
@@ -139,41 +142,49 @@ if __name__ == '__main__':
 
     scores = deque(maxlen=episode_count)
 
+    sw_scores = deque(maxlen=100)
+
     solved_score = 200
     first_solved = None
     mean_score_at_250 = None
     mean_score_at_500 = None
     mean_score_at_750 = None
 
-    for i in range(episode_count):
-        ob = env.reset()
+    i = 0
+    # for i in range(episode_count):
+    while True:
+        i += 1
+        state = env.reset()
         score = 0
         while True:
-            action = agent.act(ob)
-            ob1 = ob
-            ob, reward, done, _ = env.step(action)
-            ob2 = ob
+            action = agent.act(state)
+            next_state, reward, done, _ = env.step(action)
+            agent.remember(state, action, reward, next_state, done)
 
-            agent.remember(ob1, action, reward, ob2, done)
+            state = next_state
+
             score += reward
 
             if done:
                 scores.append(score)
+                sw_scores.append(score)
 
                 if score >= solved_score and first_solved == None:
                     first_solved = i
 
-                if i == 250:
-                    mean_score_at_250 = np.mean(scores)
-                elif i == 500:
-                    mean_score_at_500 = np.mean(scores)
-                if i == 750:
-                    mean_score_at_750 = np.mean(scores)
+                # if i == 250:
+                #     mean_score_at_250 = np.mean(scores)
+                # elif i == 500:
+                #     mean_score_at_500 = np.mean(scores)
+                # if i == 750:
+                #     mean_score_at_750 = np.mean(scores)
 
                 print('Episode: {}\t Epsilon: {}\t Score: {}\t Mean Score:{}\t First Solved:{}'.format(i, agent.epsilon, score, np.mean(scores), first_solved))
                 agent.train(batch_size=batch_size)
                 break
-            env.render()
+            # env.render()
+        if np.mean(sw_scores) >= 195:
+            break
 
     print("HyperParameters:")
     print("seed = {}".format(seed))
