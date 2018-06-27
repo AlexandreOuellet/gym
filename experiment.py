@@ -1,16 +1,7 @@
 import glob
 import json
 
-import gym
-from gym.wrappers import Monitor
-
-import uuid
-
-import numpy as np
-
-from collections import deque
-
-from agents.dqnagent import DQNAgent
+from multiprocessing import Process
 
 def main():
     experiments = {}
@@ -34,58 +25,87 @@ def main():
     baseline_experiment = {**env_params, **agent_params}
     all_experiments = buildExperiments([], variations_by_type, all_variation_type.copy(), baseline_experiment)
 
-    for experiment in all_experiments:
-        #environment parameters
-        gym_id = experiment["gym_id"]
-        sliding_window_solved_score = experiment["sliding_window_solved_score"]
-        sliding_window_score_length = experiment["sliding_window_score_length"]
-        env_seed = experiment["env_seed"]
-        max_episode = experiment["max_episode"]
-
-        env = gym.make(gym_id)
-        env = Monitor(env, "{}".format(experiment['folder']), video_callable=False, force=True, resume=False,
-                write_upon_reset=False, uid=None, mode=None)
-
-        env.seed(env_seed)
-        scores = deque()
-        sw_scores = deque(maxlen=sliding_window_score_length)
-
-        #agent parameters
-        agent_seed = experiment["agent_seed"]
-        activation = experiment["activation"]
-        min_episode_before_acting = experiment["min_episode_before_acting"]
-        epsilon = experiment["epsilon"]
-        nb_hidden_layer = experiment["nb_hidden_layer"]
-        layer_width = experiment["layer_width"]
-        memory_length = experiment["memory_length"]
-        batch_size = experiment["batch_size"]
-        agent = DQNAgent(env.observation_space, env.action_space, agent_seed, min_episode_before_acting, activation, epsilon, layer_width, nb_hidden_layer, memory_length)
-
-        current_episode = 0
-        while (len(sw_scores) == 0 or np.mean(sw_scores) < sliding_window_solved_score) and (max_episode == None or current_episode < max_episode):
-            state = env.reset()
-
-            current_episode += 1
-            reward = 0
-            done = False
-            episode_score = 0
-
-            while not done:
-                action = agent.act(state)
-                next_state, reward, done, _ = env.step(action)
-                agent.remember(state, action, reward, next_state, done)
-
-                state = next_state
-
-                episode_score += reward
-
-                if done:
-                    scores.append(episode_score)
-                    sw_scores.append(episode_score)
-
-                    print('Episode: {}\t Epsilon: {}\t Score: {}\t Mean Score:{}\t Sliding Score:{}\t'.format(current_episode, agent.epsilon, episode_score, np.mean(scores), np.mean(sw_scores)))
-                    agent.train(batch_size=batch_size)
+    processes = []
+    while len(all_experiments) != 0:
+        while len(all_experiments) > 0 and len(processes) < 1:
+            experiment = all_experiments.pop()
+            p = Process(target=runExperiment, args=(experiment,))
+            p.start()
+            processes.append(p)
         
+        while len(processes) != 0:
+            p = processes.pop()
+            p.join()
+
+    
+    # for experiment in all_experiments:
+    #     p = Process(target=runExperiment, args=(experiment,))
+    #     p.start()
+    #     processes.append(p)
+
+    # for p in processes:
+    #     p.join()
+
+
+def runExperiment(experiment):
+    import numpy as np
+    from collections import deque
+    import gym
+    from gym.wrappers import Monitor
+    from agents.dqnagent import DQNAgent
+
+    #environment parameters
+    gym_id = experiment["gym_id"]
+    sliding_window_solved_score = experiment["sliding_window_solved_score"]
+    sliding_window_score_length = experiment["sliding_window_score_length"]
+    env_seed = experiment["env_seed"]
+    max_episode = experiment["max_episode"]
+
+    env = gym.make(gym_id)
+    env = Monitor(env, "{}".format(experiment['folder']), video_callable=False, force=True, resume=False,
+            write_upon_reset=False, uid=None, mode=None)
+
+    env.seed(env_seed)
+    scores = deque()
+    sw_scores = deque(maxlen=sliding_window_score_length)
+
+    #agent parameters
+    agent_seed = experiment["agent_seed"]
+    activation = experiment["activation"]
+    min_episode_before_acting = experiment["min_episode_before_acting"]
+    epsilon = experiment["epsilon"]
+    nb_hidden_layer = experiment["nb_hidden_layer"]
+    layer_width = experiment["layer_width"]
+    memory_length = experiment["memory_length"]
+    batch_size = experiment["batch_size"]
+    agent = DQNAgent(env.observation_space, env.action_space, agent_seed, min_episode_before_acting, activation, epsilon, layer_width, nb_hidden_layer, memory_length)
+
+    current_episode = 0
+    while (len(sw_scores) == 0 or np.mean(sw_scores) < sliding_window_solved_score) and (max_episode == None or current_episode < max_episode):
+        state = env.reset()
+
+        current_episode += 1
+        reward = 0
+        done = False
+        episode_score = 0
+
+        while not done:
+            action = agent.act(state)
+            next_state, reward, done, _ = env.step(action)
+            agent.remember(state, action, reward, next_state, done)
+
+            state = next_state
+
+            episode_score += reward
+
+            if done:
+                scores.append(episode_score)
+                sw_scores.append(episode_score)
+
+                print('Episode: {}\t Epsilon: {}\t Score: {}\t Mean Score:{}\t Sliding Score:{}\t'.format(current_episode, agent.epsilon, episode_score, np.mean(scores), np.mean(sw_scores)))
+                agent.train(batch_size=batch_size)
+    env.close()
+
 
 def buildExperiments(all_experiments:[], variations:[], variation_types:list, current_experiment:{}):
     variation_type = variation_types.pop()

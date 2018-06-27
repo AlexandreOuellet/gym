@@ -5,7 +5,7 @@
             "env_seed":1,
             "sliding_window_solved_score":195,
             "sliding_window_score_length":100,
-            "max_episode":10000,
+            "max_episode":10,
             "folder":"./monitoring/"
         },
         "agent":{
@@ -14,22 +14,37 @@
             "min_episode_before_acting":0,
             "epsilon":1,
             "nb_hidden_layer":2,
-            "layer_width":4,
+            "layer_width":12,
             "memory_length":200,
             "batch_size":32
         },
         "variations":[
             {
-                "seed":0
-            },
-            {
-                "seed":1
-            },
-            {
                 "min_episode_before_acting":0
             },
             {
                 "min_episode_before_acting":100
+            },
+            {
+                "epsilon":1
+            },
+            {
+                "epsilon":0.5
+            },
+            {
+                "nb_hidden_layer":2
+            },
+            {
+                "nb_hidden_layer":3
+            },
+            {
+                "nb_hidden_layer":4
+            },
+            {
+                "nb_hidden_layer":12
+            },
+            {
+                "nb_hidden_layer":16
             }
         ]
     }

@@ -8,7 +8,7 @@ import numpy as np
 
 stats_files = []
 
-for x in glob.glob('./monitoring/*.stats.json'):
+for x in glob.glob('./monitoring/**/*.stats.json', recursive=True):
     stats_files.append(x)
 
 episode_rewards = []
