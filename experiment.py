@@ -23,7 +23,10 @@ def main():
     all_variation_type = list(variations_by_type)
 
     baseline_experiment = {**env_params, **agent_params}
-    all_experiments = buildExperiments([], variations_by_type, all_variation_type.copy(), baseline_experiment)
+    all_experiments = []
+    all_experiments.append(baseline_experiment)
+    if len(all_variation_type) != 0:
+        all_experiments += buildExperiments([], variations_by_type, all_variation_type.copy(), baseline_experiment)
 
     processes = []
     while len(all_experiments) != 0:
@@ -91,12 +94,18 @@ def runExperiment(experiment):
 
         while not done:
             action = agent.act(state)
+
             next_state, reward, done, _ = env.step(action)
+            env.render()
+
             agent.remember(state, action, reward, next_state, done)
 
             state = next_state
 
             episode_score += reward
+
+            if current_episode == 720:
+                env.render()
 
             if done:
                 scores.append(episode_score)
