@@ -24,6 +24,19 @@ import numpy as np
 
 import tensorflow as tf
 
+import uuid
+
+seed=0
+min_episode_before_acting=0
+activation="tanh"
+epsilon=1
+layer_width=16
+nb_hidden_layer=4
+memory_length=200
+experiment_id="{}".format(uuid.uuid4())
+batch_size=32
+
+
 class DQNAgent(Agent):
     def __init__(self, observation_space, action_space,
         seed=0,
@@ -31,7 +44,6 @@ class DQNAgent(Agent):
         activation="tanh",
         epsilon=1,
         layer_width=16,
-        batch_size=64,
         nb_hidden_layer=4,
         memory_length=200):
 
@@ -53,11 +65,11 @@ class DQNAgent(Agent):
         self._observation_space = observation_space
         self._action_space = action_space
 
-        self._model = self._build_model(nb_hidden_layer, activation)
+        self._model = self._build_model(nb_hidden_layer, layer_width, activation)
 
         self._min_episode_before_acting = min_episode_before_acting
 
-    def _build_model(self, nb_hidden_layer, activation):
+    def _build_model(self, nb_hidden_layer, layer_width, activation):
 
         model = Sequential()
 
@@ -91,7 +103,7 @@ class DQNAgent(Agent):
             act_values = self._model.predict(state)
             return np.argmax(act_values)  # returns action
 
-    def train(self, batch_size=None):
+    def train(self, batch_size=64):
         x_batch, y_batch = [], []
         if batch_size == None:
             batch_size = len(self._memory)
@@ -135,13 +147,9 @@ if __name__ == '__main__':
                  write_upon_reset=False, uid=None, mode=None)
 
     env.seed(seed)
-    agent = DQNAgent(env.observation_space, env.action_space, seed)
+    agent = DQNAgent(env.observation_space, env.action_space, seed,min_episode_before_acting,activation,epsilon,layer_width,nb_hidden_layer,memory_length)
 
-    reward = 0
-    done = False
-
-    scores = deque(maxlen=episode_count)
-
+    scores = deque()
     sw_scores = deque(maxlen=100)
 
     solved_score = 200
@@ -150,12 +158,16 @@ if __name__ == '__main__':
     mean_score_at_500 = None
     mean_score_at_750 = None
 
-    i = 0
-    # for i in range(episode_count):
-    while True:
-        i += 1
+    episode = 0
+    while len(sw_scores) == 0 or np.mean(sw_scores) < 195:
+        episode += 1
+
         state = env.reset()
-        score = 0
+        reward = 0
+        done = False
+        episode_score = 0
+        
+
         while True:
             action = agent.act(state)
             next_state, reward, done, _ = env.step(action)
@@ -163,36 +175,24 @@ if __name__ == '__main__':
 
             state = next_state
 
-            score += reward
+            episode_score += reward
 
             if done:
-                scores.append(score)
-                sw_scores.append(score)
+                scores.append(episode_score)
+                sw_scores.append(episode_score)
 
-                if score >= solved_score and first_solved == None:
-                    first_solved = i
-
-                # if i == 250:
-                #     mean_score_at_250 = np.mean(scores)
-                # elif i == 500:
-                #     mean_score_at_500 = np.mean(scores)
-                # if i == 750:
-                #     mean_score_at_750 = np.mean(scores)
-
-                print('Episode: {}\t Epsilon: {}\t Score: {}\t Mean Score:{}\t First Solved:{}'.format(i, agent.epsilon, score, np.mean(scores), first_solved))
+                print('Episode: {}\t Epsilon: {}\t Score: {}\t Mean Score:{}\t Sliding Score:{}\t'.format(episode, agent.epsilon, episode_score, np.mean(scores), np.mean(sw_scores)))
                 agent.train(batch_size=batch_size)
                 break
             # env.render()
-        if np.mean(sw_scores) >= 195:
-            break
 
-    print("HyperParameters:")
-    print("seed = {}".format(seed))
-    print("activation = {}".format(activation))
-    print("min_episode = {}".format(min_episode))
-    print("epsilon = {}".format(epsilon))
-    print("nb_hidden_layer = {}".format(nb_hidden_layer))
-    print("layer_width = {}".format(layer_width))
-    print("memory_len = {}".format(memory_len))
-    print("batch_size = {}".format(batch_size))
-    print('Mean Score:{}\tat 250:{}\tat 500:{}\tat 750:{}\tFirst Solved:{}'.format(np.mean(scores), mean_score_at_250, mean_score_at_500, mean_score_at_750, first_solved))
+    # print("HyperParameters:")
+    # print("seed = {}".format(seed))
+    # print("activation = {}".format(activation))
+    # print("min_episode = {}".format(min_episode))
+    # print("epsilon = {}".format(epsilon))
+    # print("nb_hidden_layer = {}".format(nb_hidden_layer))
+    # print("layer_width = {}".format(layer_width))
+    # print("memory_len = {}".format(memory_len))
+    # print("batch_size = {}".format(batch_size))
+    # print('Mean Score:{}\tat 250:{}\tat 500:{}\tat 750:{}\tFirst Solved:{}'.format(np.mean(scores), mean_score_at_250, mean_score_at_500, mean_score_at_750, first_solved))

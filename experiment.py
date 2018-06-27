@@ -6,7 +6,11 @@ from gym.wrappers import Monitor
 
 import uuid
 
-# from agents.dqnagent import DQNAgent
+import numpy as np
+
+from collections import deque
+
+from agents.dqnagent import DQNAgent
 
 def main():
     experiments = {}
@@ -25,34 +29,79 @@ def main():
                 variations_by_type[key] = []
             variations_by_type[key].append(value)
 
-    all_variation_type = variations_by_type.keys()
+    all_variation_type = list(variations_by_type)
 
-    all_experiments = buildExperiments([], all_variation_type, variations_by_type, variations_by_type.copy(), {})
-
-
-
-        # experiment = {**experiment, **variation}
-        # experiment = {**experiment, **{"id":"{}".format(uuid.uuid4())}}
-
-        # variations.append(experiment)
+    baseline_experiment = {**env_params, **agent_params}
+    all_experiments = buildExperiments([], variations_by_type, all_variation_type.copy(), baseline_experiment)
 
     for experiment in all_experiments:
-        env = gym.make(experiment['gym'])
-        env = Monitor(env, "./monitoring/{}/".format(experiment['id']), video_callable=False, force=True, resume=False,
+        #environment parameters
+        gym_id = experiment["gym_id"]
+        sliding_window_solved_score = experiment["sliding_window_solved_score"]
+        sliding_window_score_length = experiment["sliding_window_score_length"]
+        env_seed = experiment["env_seed"]
+        max_episode = experiment["max_episode"]
+
+        env = gym.make(gym_id)
+        env = Monitor(env, "{}".format(experiment['folder']), video_callable=False, force=True, resume=False,
                 write_upon_reset=False, uid=None, mode=None)
+
+        env.seed(env_seed)
+        scores = deque()
+        sw_scores = deque(maxlen=sliding_window_score_length)
+
+        #agent parameters
+        agent_seed = experiment["agent_seed"]
+        activation = experiment["activation"]
+        min_episode_before_acting = experiment["min_episode_before_acting"]
+        epsilon = experiment["epsilon"]
+        nb_hidden_layer = experiment["nb_hidden_layer"]
+        layer_width = experiment["layer_width"]
+        memory_length = experiment["memory_length"]
+        batch_size = experiment["batch_size"]
+        agent = DQNAgent(env.observation_space, env.action_space, agent_seed, min_episode_before_acting, activation, epsilon, layer_width, nb_hidden_layer, memory_length)
+
+        current_episode = 0
+        while (len(sw_scores) == 0 or np.mean(sw_scores) < sliding_window_solved_score) and (max_episode == None or current_episode < max_episode):
+            state = env.reset()
+
+            current_episode += 1
+            reward = 0
+            done = False
+            episode_score = 0
+
+            while not done:
+                action = agent.act(state)
+                next_state, reward, done, _ = env.step(action)
+                agent.remember(state, action, reward, next_state, done)
+
+                state = next_state
+
+                episode_score += reward
+
+                if done:
+                    scores.append(episode_score)
+                    sw_scores.append(episode_score)
+
+                    print('Episode: {}\t Epsilon: {}\t Score: {}\t Mean Score:{}\t Sliding Score:{}\t'.format(current_episode, agent.epsilon, episode_score, np.mean(scores), np.mean(sw_scores)))
+                    agent.train(batch_size=batch_size)
         
 
-def buildExperiments(all_experiments:[], variations:[], variation_types:[]):
-    current_experiment = {}
-    for variation_type in variation_types:
-        for value in variations[variation_type]:
-            current_experiment = {**current_experiment, **{variation_type:value}}
-        all_experiments.append(current_experiment.copy())
-        
-    # for variation in all_variations:
-    #     experiment = {}
-    #     experiment = {**experiment, **experiments['env']}
-    #     experiment = {**experiment, **experiments['agent']}
+def buildExperiments(all_experiments:[], variations:[], variation_types:list, current_experiment:{}):
+    variation_type = variation_types.pop()
+    current_experiment1 = current_experiment.copy()
+    current_experiment1["folder"] += "/{}/".format(variation_type)
+
+    for value in variations[variation_type]:
+        current_experiment1 = {**current_experiment1, **{variation_type:value}}
+        current_experiment2 = current_experiment1.copy()
+        current_experiment2["folder"] += "/{}/".format(value)
+
+        if len(variation_types) == 0:
+            all_experiments.append(current_experiment2)
+        else:
+            buildExperiments(all_experiments, variations, variation_types.copy(), current_experiment2)
+
     return all_experiments
     
 if __name__ == '__main__':
