@@ -5,13 +5,13 @@
             "env_seed":1,
             "sliding_window_solved_score":195,
             "sliding_window_score_length":100,
-            "max_episode":10,
+            "max_episode":10000,
             "folder":"./monitoring/"
         },
         "agent":{
             "agent_seed":0,
             "activation":"tanh",
-            "min_episode_before_acting":0,
+            "min_episode_before_acting":100,
             "epsilon":1,
             "nb_hidden_layer":2,
             "layer_width":12,

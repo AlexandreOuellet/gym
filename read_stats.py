@@ -42,11 +42,12 @@ legends = []
 
 for mean_stats, stats, stats_file in mean_stats:
     mean = mean_stats[len(mean_stats) - 1]
-    if  mean > 150:
-        plt.plot(stats, label="{}".format(stats_file))
+    print("Mean too low.  Mean:{}\tEpisodes:{}\tFile:{}".format(mean, len(mean_stats), stats_file))
+    if  mean > 194 and len(mean_stats) < 3000:
+        plt.plot(mean_stats, label="{}".format(stats_file))
         legends.append(stats_file)
-    else:
-        print("Mean too low : {}".format(mean))
+    # else:
+    #     print("Mean too low.  Mean:{}\tEpisodes:{}".format(mean, len(mean_stats)))
 
 plt.legend(legends)
 plt.tight_layout()

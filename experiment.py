@@ -30,7 +30,7 @@ def main():
 
     processes = []
     while len(all_experiments) != 0:
-        while len(all_experiments) > 0 and len(processes) < 1:
+        while len(all_experiments) > 0 and len(processes) < 4:
             experiment = all_experiments.pop()
             p = Process(target=runExperiment, args=(experiment,))
             p.start()
@@ -96,7 +96,6 @@ def runExperiment(experiment):
             action = agent.act(state)
 
             next_state, reward, done, _ = env.step(action)
-            env.render()
 
             agent.remember(state, action, reward, next_state, done)
 
@@ -104,8 +103,8 @@ def runExperiment(experiment):
 
             episode_score += reward
 
-            if current_episode == 720:
-                env.render()
+            # if np.mean(sw_scores) > 180:
+            #     env.render()
 
             if done:
                 scores.append(episode_score)
