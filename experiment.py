@@ -30,7 +30,7 @@ def main():
 
     processes = []
     while len(all_experiments) != 0:
-        while len(all_experiments) > 0 and len(processes) < 4:
+        while len(all_experiments) > 0 and len(processes) < 1:
             experiment = all_experiments.pop()
             p = Process(target=runExperiment, args=(experiment,))
             p.start()
